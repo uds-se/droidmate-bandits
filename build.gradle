@@ -5,6 +5,7 @@ plugins {
 }
 
 apply plugin: 'application'
+mainClassName = 'saarland.cispa.droidmate.thesis.Main'
 
 version 'hyrbid2-1.0-SNAPSHOT'
 
