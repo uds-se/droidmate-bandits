@@ -6,35 +6,44 @@ import org.droidmate.ExplorationAPI
 import org.droidmate.command.ExploreCommand
 import org.droidmate.configuration.ConfigurationWrapper
 import org.droidmate.exploration.StrategySelector
-import org.droidmate.exploration.strategy.ISelectableExplorationStrategy
 import org.droidmate.exploration.strategy.widget.FitnessProportionateSelection
 import org.droidmate.report.Reporter
 import org.droidmate.report.apk.EffectiveActions
 import java.nio.file.Path
 
 object Main {
-    val modelPath : Path? = null//cfg.apksDirPath.resolve("hybrid_model.csv")
-
     @JvmStatic fun main(args: Array<String>) {
         // --Selectors-actionLimit=500
-        val cfg = ExplorationAPI.config(args)
+		val modelPath : Path? = null/*Paths.get("./data")
+				.resolve("runs")
+				.resolve("fps-h")//.resolve("fps-h-new-pre-loaded")
+				.resolve("dev${cfg[deviceIndex]}")
+				.resolve("model")
+				.resolve("com.wikihow.wikihowapp")//.resolve("com.dougkeen.bart")
+				.resolve("hybrid_model.csv")
+				.toAbsolutePath()*/
 
-        //val data = prepareFPSH(cfg, modelPath)
-        val data = prepareFPS(cfg)
-		//val data = prepareRandom(cfg)
-        val strategies = data.first
-        val selectors = data.second
+        runFPSH(args, modelPath)
+        runFPS(args)
+		runRandom(args)
+    }
 
+    private fun getDefaultReporters(cfg: ConfigurationWrapper): List<Reporter>{
         val defaultReporter = ExploreCommand.defaultReportWatcher(cfg).dropLast(1)
         val actions = EffectiveActions()
         val reporter : MutableList<Reporter> = mutableListOf()
         defaultReporter.forEach { reporter.add(it) }
         reporter.add(actions)
 
-        ExplorationAPI.explore(cfg, strategies = strategies, selectors = selectors, reportCreators = reporter)
+        return reporter
     }
 
-    private fun prepareFPSH(cfg: ConfigurationWrapper): Pair<List<ISelectableExplorationStrategy>, List<StrategySelector>>{
+    private fun runFPSH(originalArgs: Array<String>, modelPath: Path?) {
+		val args = arrayOf(*originalArgs)
+		val argIdx = args.indexOfFirst { it.contains("./data/runs/") }
+		args[argIdx] = args[argIdx].replace("./data/runs/", "./data/runs/fps-h/")
+		val cfg = ExplorationAPI.config(args)
+
         val hybridStrategy = FitnessHybridStrategy(cfg, modelPath)
         val customStrategySelector =
                 StrategySelector(8, "hybrid", { context, pool, _ ->
@@ -56,10 +65,17 @@ object Main {
         defaultSelectors.forEach { selectors.add(it) }
         selectors.add(customStrategySelector)
 
-        return Pair(strategies, selectors)
+        val reporter = getDefaultReporters(cfg)
+
+        ExplorationAPI.explore(cfg, strategies = strategies, selectors = selectors, reportCreators = reporter)
     }
 
-    private fun prepareFPS(cfg: ConfigurationWrapper): Pair<List<ISelectableExplorationStrategy>, List<StrategySelector>>{
+    private fun runFPS(originalArgs: Array<String>) {
+		val args = arrayOf(*originalArgs)
+		val argIdx = args.indexOfFirst { it.contains("./data/runs/") }
+		args[argIdx] = args[argIdx].replace("./data/runs/", "./data/runs/fps/")
+		val cfg = ExplorationAPI.config(args)
+
         val defaultStrategies = ExploreCommand.getDefaultStrategies(cfg)
         val back = defaultStrategies.component1()
         val reset = defaultStrategies.component2()
@@ -74,13 +90,22 @@ object Main {
 
         selectors.add(StrategySelector(selectors.size, "randomBiased", StrategySelector.randomBiased))
 
-        return Pair(strategies, selectors)
-    }
+		val reporter = getDefaultReporters(cfg)
 
-    private fun prepareRandom(cfg: ConfigurationWrapper): Pair<List<ISelectableExplorationStrategy>, List<StrategySelector>>{
-        val defaultStrategies = ExploreCommand.getDefaultStrategies(cfg)
-        val defaultSelectors = ExploreCommand.getDefaultSelectors(cfg)
+		ExplorationAPI.explore(cfg, strategies = strategies, selectors = selectors, reportCreators = reporter)
+	}
 
-        return Pair(defaultStrategies, defaultSelectors)
+    private fun runRandom(originalArgs: Array<String>) {
+		val args = arrayOf(*originalArgs)
+		val argIdx = args.indexOfFirst { it.contains("./data/runs/") }
+		args[argIdx] = args[argIdx].replace("./data/runs/", "./data/runs/random/")
+		val cfg = ExplorationAPI.config(args)
+
+        val strategies = ExploreCommand.getDefaultStrategies(cfg)
+        val selectors = ExploreCommand.getDefaultSelectors(cfg)
+
+		val reporter = getDefaultReporters(cfg)
+
+		ExplorationAPI.explore(cfg, strategies = strategies, selectors = selectors, reportCreators = reporter)
     }
 }
