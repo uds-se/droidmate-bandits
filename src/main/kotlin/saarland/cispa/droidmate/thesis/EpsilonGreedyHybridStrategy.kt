@@ -1,5 +1,6 @@
 package saarland.cispa.droidmate.thesis
 
+import org.droidmate.configuration.ConfigurationWrapper
 import org.droidmate.deviceInterface.guimodel.ExplorationAction
 import org.droidmate.exploration.ExplorationContext
 import org.droidmate.exploration.actions.availableActions
@@ -13,9 +14,13 @@ open class EpsilonGreedyHybridStrategy @JvmOverloads constructor(randomSeed: Lon
                                                                  modelName: String = "HasModel.model",
                                                                  arffName: String = "baseModelFile.arff",
                                                                  private val epsilon: Double = 0.3,
-																 private val psi: Double = 20.0) : FitnessProportionateSelection(randomSeed, modelName, arffName) {
+																 private val psi: Double) : FitnessProportionateSelection(randomSeed, modelName, arffName) {
 
-    override val eventWatcher: EventProbabilityMF
+	constructor(cfg: ConfigurationWrapper, modelPath: Path?, modelName: String = "HasModel.model",
+				arffName: String = "baseModelFile.arff", epsilon: Double = 0.3, psi: Double)
+			: this(cfg.randomSeed, modelPath, modelName, arffName, epsilon, psi)
+
+	override val eventWatcher: EventProbabilityMF
         get() = (eContext.findWatcher { it is HybridEventProbabilityMF } as EventProbabilityMF)
 
     /**

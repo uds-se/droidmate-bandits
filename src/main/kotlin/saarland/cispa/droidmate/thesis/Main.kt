@@ -25,6 +25,8 @@ object Main {
 
         runFPSH(args, modelPath)
         runFPS(args)
+        runEpsilonHybrid(args, modelPath)
+        runEpsilonPure(args)
 		runRandom(args)
     }
 
@@ -94,6 +96,46 @@ object Main {
 
 		ExplorationAPI.explore(cfg, strategies = strategies, selectors = selectors, reportCreators = reporter)
 	}
+
+    private fun runEpsilonHybrid(originalArgs: Array<String>, modelPath: Path?) {
+        runEpsilon(originalArgs, modelPath, "epsilon-h")
+    }
+
+    private fun runEpsilonPure(originalArgs: Array<String>) {
+        runEpsilon(originalArgs, null, "epsilon", psi = 0.0)
+    }
+
+    private fun runEpsilon(originalArgs: Array<String>, modelPath: Path?, output: String, psi: Double = 20.0) {
+        val args = arrayOf(*originalArgs)
+        val argIdx = args.indexOfFirst { it.contains("./data/runs/") }
+        args[argIdx] = args[argIdx].replace("./data/runs/", "./data/runs/$output/")
+        val cfg = ExplorationAPI.config(args)
+
+        val hybridStrategy = EpsilonGreedyHybridStrategy(cfg, modelPath, psi = psi)
+        val customStrategySelector =
+                StrategySelector(8, "hybrid", { context, pool, _ ->
+                    // Force synchronization
+                    val feature = context.findWatcher { it is HybridEventProbabilityMF }
+                    feature?.await()
+
+                    pool.getFirstInstanceOf(EpsilonGreedyHybridStrategy::class.java)})
+
+        val defaultStrategies = ExploreCommand.getDefaultStrategies(cfg)
+        val back = defaultStrategies.component1()
+        val reset = defaultStrategies.component2()
+        val terminate = defaultStrategies.component3()
+        val permission = defaultStrategies.component5()
+        val strategies = listOf(back, reset, terminate, permission, hybridStrategy)
+
+        val defaultSelectors = ExploreCommand.getDefaultSelectors(cfg).dropLast(1)
+        val selectors : MutableList<StrategySelector> = mutableListOf()
+        defaultSelectors.forEach { selectors.add(it) }
+        selectors.add(customStrategySelector)
+
+        val reporter = getDefaultReporters(cfg)
+
+        ExplorationAPI.explore(cfg, strategies = strategies, selectors = selectors, reportCreators = reporter)
+    }
 
     private fun runRandom(originalArgs: Array<String>) {
 		val args = arrayOf(*originalArgs)
