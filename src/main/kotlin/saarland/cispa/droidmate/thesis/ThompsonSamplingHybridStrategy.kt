@@ -12,10 +12,10 @@ class ThompsonSamplingHybridStrategy(randomSeed: Long,
                                      private val modelPath: Path?,
                                      modelName: String = "HasModel.model",
                                      arffName: String = "baseModelFile.arff",
-                                     private val psi: Double = 20.0) : FitnessProportionateSelection(randomSeed, modelName, arffName) {
+                                     private val psi: Double) : FitnessProportionateSelection(randomSeed, modelName, arffName) {
 
-    constructor(cfg: ConfigurationWrapper, modelPath: Path?, modelName: String = "HasModel.model", arffName: String = "baseModelFile.arff")
-            : this(cfg.randomSeed, modelPath, modelName, arffName)
+    constructor(cfg: ConfigurationWrapper, modelPath: Path?, modelName: String = "HasModel.model", arffName: String = "baseModelFile.arff", psi: Double)
+            : this(cfg.randomSeed, modelPath, modelName, arffName, psi)
 
 
     override val eventWatcher: EventProbabilityMF

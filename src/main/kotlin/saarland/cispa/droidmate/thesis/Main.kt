@@ -27,6 +27,8 @@ object Main {
         runFPS(args)
         runEpsilonHybrid(args, modelPath)
         runEpsilonPure(args)
+        runTSHybrid(args, modelPath)
+        runTSPure(args)
 		runRandom(args)
     }
 
@@ -119,6 +121,46 @@ object Main {
                     feature?.await()
 
                     pool.getFirstInstanceOf(EpsilonGreedyHybridStrategy::class.java)})
+
+        val defaultStrategies = ExploreCommand.getDefaultStrategies(cfg)
+        val back = defaultStrategies.component1()
+        val reset = defaultStrategies.component2()
+        val terminate = defaultStrategies.component3()
+        val permission = defaultStrategies.component5()
+        val strategies = listOf(back, reset, terminate, permission, hybridStrategy)
+
+        val defaultSelectors = ExploreCommand.getDefaultSelectors(cfg).dropLast(1)
+        val selectors : MutableList<StrategySelector> = mutableListOf()
+        defaultSelectors.forEach { selectors.add(it) }
+        selectors.add(customStrategySelector)
+
+        val reporter = getDefaultReporters(cfg)
+
+        ExplorationAPI.explore(cfg, strategies = strategies, selectors = selectors, reportCreators = reporter)
+    }
+
+    private fun runTSHybrid(originalArgs: Array<String>, modelPath: Path?) {
+        runTS(originalArgs, modelPath, "thompson-h")
+    }
+
+    private fun runTSPure(originalArgs: Array<String>) {
+        runTS(originalArgs, null, "thompson", psi = 0.0)
+    }
+
+    private fun runTS(originalArgs: Array<String>, modelPath: Path?, output: String, psi: Double = 20.0) {
+        val args = arrayOf(*originalArgs)
+        val argIdx = args.indexOfFirst { it.contains("./data/runs/") }
+        args[argIdx] = args[argIdx].replace("./data/runs/", "./data/runs/$output/")
+        val cfg = ExplorationAPI.config(args)
+
+        val hybridStrategy = ThompsonSamplingHybridStrategy(cfg, modelPath, psi = psi)
+        val customStrategySelector =
+                StrategySelector(8, "hybrid", { context, pool, _ ->
+                    // Force synchronization
+                    val feature = context.findWatcher { it is HybridEventDistributionMF }
+                    feature?.await()
+
+                    pool.getFirstInstanceOf(ThompsonSamplingHybridStrategy::class.java)})
 
         val defaultStrategies = ExploreCommand.getDefaultStrategies(cfg)
         val back = defaultStrategies.component1()
