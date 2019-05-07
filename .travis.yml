@@ -1,0 +1,43 @@
+# Android language used because it installs Android SDK required by DroidMate.
+language: java
+
+git:
+  # To speed up things. By default it is 50.
+  depth: 1 
+  
+jdk:
+  # Most of DroidMate is compiled with Java 8.
+  - oraclejdk8
+
+env:
+  global:
+
+    # Required to obtain reference to jarsigner.
+    - JAVA_HOME=/usr/lib/jvm/java-8-oracle
+
+before_install:
+
+  # Change to the directory containing the main build script of DroidMate.
+  # - cd dev/droidmate
+
+  # Allow Gradle build script to execute.
+  - chmod +x gradlew
+
+before_cache:
+
+  # Allow Gradle to use cache.
+  - rm -f $HOME/.gradle/caches/modules-2/modules-2.lock
+
+cache:
+  directories:
+
+    # Cache gradle dirs.
+    - $HOME/.gradle/caches/
+    - $HOME/.gradle/wrapper/
+
+    # Note: Android SDK should not be cached, according to https://docs.travis-ci.com/user/caching/#Things-not-to-cache
+
+script:
+
+  # By default, 'android' language uses 'connectedCheck'. Here we replace it with appropriate task.
+  - ./gradlew build

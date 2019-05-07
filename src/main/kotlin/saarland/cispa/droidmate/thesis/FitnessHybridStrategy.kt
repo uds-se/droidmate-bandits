@@ -1,22 +1,27 @@
 package saarland.cispa.droidmate.thesis
 
 import org.droidmate.configuration.ConfigurationWrapper
-import org.droidmate.deviceInterface.guimodel.ExplorationAction
+import org.droidmate.deviceInterface.exploration.ExplorationAction
 import org.droidmate.exploration.ExplorationContext
 import org.droidmate.exploration.actions.availableActions
-import org.droidmate.exploration.statemodel.Widget
-import org.droidmate.exploration.statemodel.features.EventProbabilityMF
-import org.droidmate.exploration.strategy.widget.FitnessProportionateSelection
+import org.droidmate.exploration.modelFeatures.EventProbabilityMF
+import org.droidmate.exploration.strategy.FitnessProportionateSelection
+import org.droidmate.explorationModel.interaction.Widget
 import java.nio.file.Path
 
-open class FitnessHybridStrategy constructor(randomSeed: Long,
-                                             private val modelPath: Path?,
-                                             modelName: String = "HasModel.model",
-                                             arffName: String = "baseModelFile.arff") : FitnessProportionateSelection(randomSeed, modelName, arffName) {
+open class FitnessHybridStrategy constructor(
+    randomSeed: Long,
+    private val modelPath: Path?,
+    modelName: String = "HasModel.model",
+    arffName: String = "baseModelFile.arff"
+) : FitnessProportionateSelection(randomSeed, modelName, arffName) {
 
-    constructor(cfg: ConfigurationWrapper, modelPath: Path?, modelName: String = "HasModel.model", arffName: String = "baseModelFile.arff")
-            : this(cfg.randomSeed, modelPath, modelName, arffName)
-
+    constructor(
+        cfg: ConfigurationWrapper,
+        modelPath: Path?,
+        modelName: String = "HasModel.model",
+        arffName: String = "baseModelFile.arff"
+    ) : this(cfg.randomSeed, modelPath, modelName, arffName)
 
     override val eventWatcher: EventProbabilityMF
             get() = (eContext.findWatcher { it is HybridEventProbabilityMF } as EventProbabilityMF)
@@ -24,13 +29,13 @@ open class FitnessHybridStrategy constructor(randomSeed: Long,
     override fun chooseActionForWidget(chosenWidget: Widget): ExplorationAction {
         var widget = chosenWidget
 
-        while (!chosenWidget.canBeActedUpon) {
+        while (!chosenWidget.canInteractWith) {
             widget = currentState.widgets.first { it.id == chosenWidget.parentId }
         }
 
-        logger.debug("Chosen widget: $widget: ${widget.canBeActedUpon}\t${widget.clickable}\t${widget.checked}\t${widget.longClickable}\t${widget.scrollable}")
+        logger.debug("Chosen widget: $widget: ${widget.canInteractWith}\t${widget.clickable}\t${widget.checked}\t${widget.longClickable}\t${widget.scrollable}")
 
-        val actionList = widget.availableActions()
+        val actionList = widget.availableActions(0, false)
 
         assert(actionList.isNotEmpty()) { "No actions can be performed on the widget $widget" }
 
