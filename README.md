@@ -10,9 +10,9 @@ Strategies for [DroidMate-2](https://github.com/uds-se/droidmate): A Platform fo
 
 __DM-2: Bandits__ is built on top of DroidMate-2. On most environments with a JDK and Android SDK installed it should automatically obtain all dependencies from JitPack and Maven Central.
 
-The tool is also integrated into the Travis-CI, the [CI configuration file](https://github.com/uds-se/droidmate-bandits/blob/master/.travis.yml) contains all commands used to run it.  
+The tool is also integrated into the Travis-CI, its [configuration file](https://github.com/uds-se/droidmate-bandits/blob/master/.travis.yml) contains all commands used to configure and execute it.  
 
-In case of trouble compiling the tool use have a look at [DM-2 wiki](https://github.com/uds-se/droidmate/wiki/Building) 
+In case of trouble compiling the tool, have a look at the [DM-2 wiki](https://github.com/uds-se/droidmate/wiki/Building) 
 
 # Usage instructions
 
@@ -47,7 +47,7 @@ Example to run Epsilon-Greedy `./gradlew run --args="-e True <OTHER ARGS>"`
 To list all available parameters, run with `--help`
 
 ```
-./gradlew --args='--help'
+./gradlew run --args="--help"
 ```
 
 ### Example configuration with arguments:
@@ -69,15 +69,15 @@ To obtain coverage the apps should first be instrumented.
 Use
 
 ```
-./gradlew run --args="--ExecutionMode-explore=false ==ExecutionMode-coverage=true"
+./gradlew run --args="--ExecutionMode-explore=false --ExecutionMode-coverage=true"
 ```
 
 to instrument an app (it will take the first app from the `./apks` folder).
 
-To monitor coverage while exploring an app add the argument `--StatementCoverage-enableCoverage=true`to your command. For example:
+To monitor coverage while exploring an app add the argument `--StatementCoverage-enableCoverage=true` to your command. For example:
 
 ```
-./gradlew run --args="--ExecutionMode-explore=false --ExecutionMode-coverage=true"
+./gradlew run --args="-e true --Selectors-randomSeed=0 --Selectors-actionLimit=100 --StatementCoverage-enableCoverage=true"
 ``` 
 
 __Note:__ The instrumentation keeps the original (non-instrumented) app in the same location, to run only the version with coverage move the original apk to another folder.  
