@@ -7,15 +7,17 @@ import com.natpryce.konfig.Key
 import kotlinx.coroutines.runBlocking
 import org.droidmate.api.ExplorationAPI
 import org.droidmate.command.ExploreCommandBuilder
+import org.droidmate.configuration.ConfigProperties
 import org.droidmate.configuration.ConfigurationWrapper
 import org.droidmate.exploration.StrategySelector
 import org.droidmate.exploration.modelFeatures.EventProbabilityMF
+import org.droidmate.exploration.strategy.FitnessProportionateSelection
 import org.slf4j.LoggerFactory
 
 /**
  * Recommended run config:
  * JVM Options: -Dkotlinx.coroutines.debug -Dlogback.configurationFile=default-logback.xml
- * Command line args: -e True --Output-outputDir=./data/runs/dev0 --Selectors-actionLimit=1000 --Selectors-randomSeed=0
+ * Command line args: -e True --Selectors-actionLimit=1000 --Selectors-randomSeed=0
  */
 object Main {
     @JvmStatic
@@ -48,9 +50,15 @@ object Main {
             metavar = "Boolean"
         ),
         CommandLineOption(
-            CommandLineConfig.fpsHybrid,
+            CommandLineConfig.fps,
             description = "Enable Fitness Proportionate Selection Hybrid Strategy",
             short = "fps",
+            metavar = "Boolean"
+        ),
+        CommandLineOption(
+            CommandLineConfig.fpsHybrid,
+            description = "Enable Fitness Proportionate Selection Hybrid Strategy",
+            short = "fpsh",
             metavar = "Boolean"
         )
     )
@@ -68,13 +76,19 @@ object Main {
         runBlocking {
             val cfg = ExplorationAPI.config(args, *extraCmdOptions())
 
+            if (cfg[ConfigProperties.ExecutionMode.coverage]) {
+                ExplorationAPI.instrument(cfg)
+                System.exit(0)
+            }
+
             val epsilon = cfg.asInt(CommandLineConfig.epsilon)
             val epsilonHybrid = cfg.asInt(CommandLineConfig.epsilonHybrid)
             val thompson = cfg.asInt(CommandLineConfig.thompson)
             val thompsonHybrid = cfg.asInt(CommandLineConfig.thompsonHybrid)
+            val fps = cfg.asInt(CommandLineConfig.fps)
             val fpsH = cfg.asInt(CommandLineConfig.fpsHybrid)
 
-            val numberActive = epsilon + epsilonHybrid + thompson + thompsonHybrid + fpsH
+            val numberActive = epsilon + epsilonHybrid + thompson + thompsonHybrid + fps + fpsH
 
             if (numberActive > 1) {
                 log.error(
@@ -92,7 +106,8 @@ object Main {
                 epsilonHybrid > 0 -> addEpsilonHybrid(builder, cfg)
                 thompson > 0 -> addThompson(builder, cfg)
                 thompsonHybrid > 0 -> addThompsonHybrid(builder, cfg)
-                fpsH > 0 -> addEpsilonHybrid(builder, cfg)
+                fps > 0 -> addFPS(builder, cfg)
+                fpsH > 0 -> addFPSHybrid(builder, cfg)
             }
 
             ExplorationAPI.explore(cfg, builder)
@@ -145,6 +160,21 @@ object Main {
         val strategy = ThompsonSamplingHybridStrategy(cfg, true, psi = 20.0)
         builder.withStrategy(strategy)
         addThompsonSelector(builder, "thompson-h")
+    }
+
+    private fun addFPS(builder: ExploreCommandBuilder, cfg: ConfigurationWrapper) {
+        val strategy = FitnessProportionateSelection(cfg.randomSeed)
+        builder.withStrategy(strategy)
+
+        builder.insertBefore(StrategySelector.randomWidget,
+            "fps",
+            { context, pool, _ ->
+                // Force synchronization
+                val feature = context.findWatcher { it is EventProbabilityMF }
+                feature?.join()
+
+                pool.getFirstInstanceOf(FitnessProportionateSelection::class.java)
+            })
     }
 
     private fun addFPSHybrid(builder: ExploreCommandBuilder, cfg: ConfigurationWrapper) {

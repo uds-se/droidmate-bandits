@@ -8,5 +8,6 @@ object CommandLineConfig {
     val epsilonHybrid by booleanType
     val thompson by booleanType
     val thompsonHybrid by booleanType
+    val fps by booleanType
     val fpsHybrid by booleanType
 }
