@@ -1,4 +1,4 @@
-package saarland.cispa.droidmate.thesis
+package org.droidmate.bandits
 
 import org.apache.commons.text.similarity.LevenshteinDistance
 import org.droidmate.deviceInterface.exploration.ExplorationAction

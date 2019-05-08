@@ -1,6 +1,5 @@
-package saarland.cispa.droidmate.thesis
+package org.droidmate.bandits
 
-import kotlinx.coroutines.runBlocking
 import org.apache.commons.math3.distribution.BetaDistribution
 import org.droidmate.deviceInterface.exploration.ExplorationAction
 import org.droidmate.exploration.actions.availableActions
@@ -12,15 +11,16 @@ class HybridEventDistributionMF(
     modelName: String,
     arffName: String,
     useClassMembershipProbability: Boolean,
-    modelPath: Path? = null,
-    psi: Double = 20.0
-) : HybridEventProbabilityMF(modelName, arffName, useClassMembershipProbability, modelPath, psi) {
+    psi: Double,
+    useCrowdModel: Boolean,
+    modelPath: Path?
+) : HybridEventProbabilityMF(modelName, arffName, useClassMembershipProbability, psi, useCrowdModel, modelPath) {
 
     suspend fun getActionDistributions(state: State): Map<ExplorationAction, BetaDistribution> {
         try {
             mutex.lock()
             val actionDistributions = mutableMapOf<ExplorationAction, BetaDistribution>()
-            state.actionableWidgets.forEach { widget ->
+            state.visibleTargets.forEach { widget ->
                 val distributions = getDistributionsForWidgetUnsync(widget, state, widget.availableActions(0, false))
                 actionDistributions.putAll(distributions)
             }
@@ -30,7 +30,7 @@ class HybridEventDistributionMF(
         }
     }
 
-    fun getDistributionsForWidgetUnsync(widget: Widget, state: State, actionList: List<ExplorationAction>): Map<ExplorationAction, BetaDistribution> {
+    private fun getDistributionsForWidgetUnsync(widget: Widget, state: State, actionList: List<ExplorationAction>): Map<ExplorationAction, BetaDistribution> {
         val classId = widget.toClassIdentifier(state)
         return actionList
                 .map {
@@ -42,9 +42,9 @@ class HybridEventDistributionMF(
                 .toMap()
     }
 
-    fun getDistributionsForWidget(widget: Widget, state: State, actionList: List<ExplorationAction>): Map<ExplorationAction, BetaDistribution> {
+    suspend fun getDistributionsForWidget(widget: Widget, state: State, actionList: List<ExplorationAction>): Map<ExplorationAction, BetaDistribution> {
         try {
-            runBlocking { mutex.lock() }
+            mutex.lock()
             return getDistributionsForWidgetUnsync(widget, state, actionList)
         } finally {
             mutex.unlock()

@@ -1,203 +1,164 @@
 @file:Suppress("unused")
 
-package saarland.cispa.droidmate.thesis
+package org.droidmate.bandits
 
+import com.natpryce.konfig.CommandLineOption
+import com.natpryce.konfig.Key
 import kotlinx.coroutines.runBlocking
 import org.droidmate.api.ExplorationAPI
+import org.droidmate.command.ExploreCommandBuilder
+import org.droidmate.configuration.ConfigurationWrapper
+import org.droidmate.exploration.StrategySelector
+import org.droidmate.exploration.modelFeatures.EventProbabilityMF
+import org.slf4j.LoggerFactory
 
+/**
+ * Recommended run config:
+ * JVM Options: -Dkotlinx.coroutines.debug -Dlogback.configurationFile=default-logback.xml
+ * Command line args: -e True --Output-outputDir=./data/runs/dev0 --Selectors-actionLimit=1000 --Selectors-randomSeed=0
+ */
 object Main {
+    @JvmStatic
+    private val log by lazy { LoggerFactory.getLogger(this::class.java) }
+
+    @JvmStatic
+    private fun extraCmdOptions() = arrayOf(
+        CommandLineOption(
+            CommandLineConfig.epsilon,
+            description = "Enable Epsilon-Greedy Strategy",
+            short = "e",
+            metavar = "Boolean"
+        ),
+        CommandLineOption(
+            CommandLineConfig.epsilonHybrid,
+            description = "Enable Epsilon-Greedy Strategy with Crowd-Model",
+            short = "eh",
+            metavar = "Boolean"
+        ),
+        CommandLineOption(
+            CommandLineConfig.thompson,
+            description = "Enable Thompson Sampling Strategy",
+            short = "t",
+            metavar = "Boolean"
+        ),
+        CommandLineOption(
+            CommandLineConfig.thompsonHybrid,
+            description = "Enable Thompson Sampling Strategy",
+            short = "th",
+            metavar = "Boolean"
+        ),
+        CommandLineOption(
+            CommandLineConfig.fpsHybrid,
+            description = "Enable Fitness Proportionate Selection Hybrid Strategy",
+            short = "fps",
+            metavar = "Boolean"
+        )
+    )
+
+    private fun ConfigurationWrapper.asInt(key: Key<*>): Int {
+        return if (this.getOrNull(key) == true) {
+            1
+        } else {
+            0
+        }
+    }
+
     @JvmStatic
     fun main(args: Array<String>) {
         runBlocking {
-            ExplorationAPI.explore(args)
+            val cfg = ExplorationAPI.config(args, *extraCmdOptions())
+
+            val epsilon = cfg.asInt(CommandLineConfig.epsilon)
+            val epsilonHybrid = cfg.asInt(CommandLineConfig.epsilonHybrid)
+            val thompson = cfg.asInt(CommandLineConfig.thompson)
+            val thompsonHybrid = cfg.asInt(CommandLineConfig.thompsonHybrid)
+            val fpsH = cfg.asInt(CommandLineConfig.fpsHybrid)
+
+            val numberActive = epsilon + epsilonHybrid + thompson + thompsonHybrid + fpsH
+
+            if (numberActive > 1) {
+                log.error(
+                    "Only one strategy among Epsilon-Greedy, Epsilon-Greedy Hybrid, Thompson, Thompson " +
+                            "Hybrid and Fitness Proportionate Selection hybrid can be active at a time."
+                )
+
+                System.exit(1)
+            }
+
+            val builder = ExploreCommandBuilder.fromConfig(cfg)
+
+            when {
+                epsilon > 0 -> addEpsilon(builder, cfg)
+                epsilonHybrid > 0 -> addEpsilonHybrid(builder, cfg)
+                thompson > 0 -> addThompson(builder, cfg)
+                thompsonHybrid > 0 -> addThompsonHybrid(builder, cfg)
+                fpsH > 0 -> addEpsilonHybrid(builder, cfg)
+            }
+
+            ExplorationAPI.explore(cfg, builder)
         }
     }
-}
 
-    /*@JvmStatic
-    fun main(args: Array<String>) {
-        // --Selectors-actionLimit=500
-        val modelPath: Path? = null/*Paths.get("./data")
-				.resolve("runs")
-				.resolve("fps-h")//.resolve("fps-h-new-pre-loaded")
-				.resolve("dev${cfg[deviceIndex]}")
-				.resolve("model")
-				.resolve("com.wikihow.wikihowapp")//.resolve("com.dougkeen.bart")
-				.resolve("hybrid_model.csv")
-				.toAbsolutePath()*/
-
-        runFPSH(args, modelPath)
-        runFPS(args)
-        runEpsilonHybrid(args, modelPath)
-        runEpsilonPure(args)
-        runTSHybrid(args, modelPath)
-        runTSPure(args)
-        runRandom(args)
-    }
-
-    /*private fun getDefaultReporters(cfg: ConfigurationWrapper): List<Reporter> {
-        val defaultReporter = ExploreCommand.defaultReportWatcher(cfg).dropLast(1)
-        val actions = EffectiveActions()
-        val reporter: MutableList<Reporter> = mutableListOf()
-        defaultReporter.forEach { reporter.add(it) }
-        reporter.add(actions)
-
-        return reporter
-    }*/
-
-    private fun runFPSH(originalArgs: Array<String>, modelPath: Path?) {
-        val args = arrayOf(*originalArgs)
-        val argIdx = args.indexOfFirst { it.contains("./data/runs/") }
-        args[argIdx] = args[argIdx].replace("./data/runs/", "./data/runs/fps-h/")
-        val cfg = ExplorationAPI.config(args)
-
-        val builder = ExploreCommandBuilder.fromConfig(cfg)
-
-        val hybridStrategy = FitnessHybridStrategy(cfg, modelPath)
-        val customStrategySelector =
-            StrategySelector(8, "hybrid", { context, pool, _ ->
-                // Force synchronization
-                val feature = context.findWatcher { it is HybridEventProbabilityMF }
-                feature?.join()
-
-                pool.getFirstInstanceOf(FitnessHybridStrategy::class.java)
-            })
-
-        val defaultStrategies = ExploreCommand.getDefaultStrategies(cfg)
-        val back = defaultStrategies.component1()
-        val reset = defaultStrategies.component2()
-        val terminate = defaultStrategies.component3()
-        val permission = defaultStrategies.component5()
-        val strategies = listOf(back, reset, terminate, permission, hybridStrategy)
-
-        val defaultSelectors = ExploreCommand.getDefaultSelectors(cfg).dropLast(1)
-        val selectors: MutableList<StrategySelector> = mutableListOf()
-        defaultSelectors.forEach { selectors.add(it) }
-        selectors.add(customStrategySelector)
-
-        val reporter = getDefaultReporters(cfg)
-
-        ExplorationAPI.explore(cfg, strategies = strategies, selectors = selectors, reportCreators = reporter)
-    }
-
-    private fun runFPS(originalArgs: Array<String>) {
-        val args = arrayOf(*originalArgs)
-        val argIdx = args.indexOfFirst { it.contains("./data/runs/") }
-        args[argIdx] = args[argIdx].replace("./data/runs/", "./data/runs/fps/")
-        val cfg = ExplorationAPI.config(args)
-
-        val defaultStrategies = ExploreCommand.getDefaultStrategies(cfg)
-        val back = defaultStrategies.component1()
-        val reset = defaultStrategies.component2()
-        val terminate = defaultStrategies.component3()
-        val permission = defaultStrategies.component5()
-        val fps = FitnessProportionateSelection(cfg.randomSeed)
-        val strategies = listOf(back, reset, terminate, permission, fps)
-
-        val defaultSelectors = ExploreCommand.getDefaultSelectors(cfg).dropLast(1)
-        val selectors: MutableList<StrategySelector> = mutableListOf()
-        defaultSelectors.forEach { selectors.add(it) }
-
-        selectors.add(StrategySelector(selectors.size, "randomBiased", StrategySelector.randomBiased))
-
-        val reporter = getDefaultReporters(cfg)
-
-        ExplorationAPI.explore(cfg, strategies = strategies, selectors = selectors, reportCreators = reporter)
-    }
-
-    private fun runEpsilonHybrid(originalArgs: Array<String>, modelPath: Path?) {
-        runEpsilon(originalArgs, modelPath, "epsilon-h")
-    }
-
-    private fun runEpsilonPure(originalArgs: Array<String>) {
-        runEpsilon(originalArgs, null, "epsilon", psi = 0.0)
-    }
-
-    private fun runEpsilon(originalArgs: Array<String>, modelPath: Path?, output: String, psi: Double = 20.0) {
-        val args = arrayOf(*originalArgs)
-        val argIdx = args.indexOfFirst { it.contains("./data/runs/") }
-        args[argIdx] = args[argIdx].replace("./data/runs/", "./data/runs/$output/")
-        val cfg = ExplorationAPI.config(args)
-
-        val hybridStrategy = EpsilonGreedyHybridStrategy(cfg, modelPath, psi = psi)
-        val customStrategySelector =
-            StrategySelector(8, "hybrid", { context, pool, _ ->
+    private fun addEpsilonSelector(builder: ExploreCommandBuilder, description: String = "epsilon") {
+        builder.insertBefore(StrategySelector.randomWidget,
+            description,
+            { context, pool, _ ->
                 // Force synchronization
                 val feature = context.findWatcher { it is HybridEventProbabilityMF }
                 feature?.join()
 
                 pool.getFirstInstanceOf(EpsilonGreedyHybridStrategy::class.java)
             })
-
-        val defaultStrategies = ExploreCommand.getDefaultStrategies(cfg)
-        val back = defaultStrategies.component1()
-        val reset = defaultStrategies.component2()
-        val terminate = defaultStrategies.component3()
-        val permission = defaultStrategies.component5()
-        val strategies = listOf(back, reset, terminate, permission, hybridStrategy)
-
-        val defaultSelectors = ExploreCommand.getDefaultSelectors(cfg).dropLast(1)
-        val selectors: MutableList<StrategySelector> = mutableListOf()
-        defaultSelectors.forEach { selectors.add(it) }
-        selectors.add(customStrategySelector)
-
-        val reporter = getDefaultReporters(cfg)
-
-        ExplorationAPI.explore(cfg, strategies = strategies, selectors = selectors, reportCreators = reporter)
     }
 
-    private fun runTSHybrid(originalArgs: Array<String>, modelPath: Path?) {
-        runTS(originalArgs, modelPath, "thompson-h")
+    private fun addEpsilon(builder: ExploreCommandBuilder, cfg: ConfigurationWrapper) {
+        val strategy = EpsilonGreedyHybridStrategy(cfg, false, psi = 1.0)
+        builder.withStrategy(strategy)
+        addEpsilonSelector(builder)
     }
 
-    private fun runTSPure(originalArgs: Array<String>) {
-        runTS(originalArgs, null, "thompson", psi = 0.0)
+    private fun addEpsilonHybrid(builder: ExploreCommandBuilder, cfg: ConfigurationWrapper) {
+        val strategy = EpsilonGreedyHybridStrategy(cfg, true, psi = 20.0)
+        builder.withStrategy(strategy)
+        addEpsilonSelector(builder, "epsilon-h")
     }
 
-    private fun runTS(originalArgs: Array<String>, modelPath: Path?, output: String, psi: Double = 20.0) {
-        val args = arrayOf(*originalArgs)
-        val argIdx = args.indexOfFirst { it.contains("./data/runs/") }
-        args[argIdx] = args[argIdx].replace("./data/runs/", "./data/runs/$output/")
-        val cfg = ExplorationAPI.config(args)
-
-        val hybridStrategy = ThompsonSamplingHybridStrategy(cfg, modelPath, psi = psi)
-        val customStrategySelector =
-            StrategySelector(8, "hybrid", { context, pool, _ ->
+    private fun addThompsonSelector(builder: ExploreCommandBuilder, description: String = "thompson") {
+        builder.insertBefore(StrategySelector.randomWidget,
+            description,
+            { context, pool, _ ->
                 // Force synchronization
                 val feature = context.findWatcher { it is HybridEventDistributionMF }
                 feature?.join()
 
                 pool.getFirstInstanceOf(ThompsonSamplingHybridStrategy::class.java)
             })
-
-        val defaultStrategies = ExploreCommand.getDefaultStrategies(cfg)
-        val back = defaultStrategies.component1()
-        val reset = defaultStrategies.component2()
-        val terminate = defaultStrategies.component3()
-        val permission = defaultStrategies.component5()
-        val strategies = listOf(back, reset, terminate, permission, hybridStrategy)
-
-        val defaultSelectors = ExploreCommand.getDefaultSelectors(cfg).dropLast(1)
-        val selectors: MutableList<StrategySelector> = mutableListOf()
-        defaultSelectors.forEach { selectors.add(it) }
-        selectors.add(customStrategySelector)
-
-        val reporter = getDefaultReporters(cfg)
-
-        ExplorationAPI.explore(cfg, strategies = strategies, selectors = selectors, reportCreators = reporter)
     }
 
-    private fun runRandom(originalArgs: Array<String>) {
-        val args = arrayOf(*originalArgs)
-        val argIdx = args.indexOfFirst { it.contains("./data/runs/") }
-        args[argIdx] = args[argIdx].replace("./data/runs/", "./data/runs/random/")
-        val cfg = ExplorationAPI.config(args)
-
-        val strategies = ExploreCommand.getDefaultStrategies(cfg)
-        val selectors = ExploreCommand.getDefaultSelectors(cfg)
-
-        val reporter = getDefaultReporters(cfg)
-
-        ExplorationAPI.explore(cfg, strategies = strategies, selectors = selectors, reportCreators = reporter)
+    private fun addThompson(builder: ExploreCommandBuilder, cfg: ConfigurationWrapper) {
+        val strategy = ThompsonSamplingHybridStrategy(cfg, false, psi = 1.0)
+        builder.withStrategy(strategy)
+        addThompsonSelector(builder)
     }
-}*/
+
+    private fun addThompsonHybrid(builder: ExploreCommandBuilder, cfg: ConfigurationWrapper) {
+        val strategy = ThompsonSamplingHybridStrategy(cfg, true, psi = 20.0)
+        builder.withStrategy(strategy)
+        addThompsonSelector(builder, "thompson-h")
+    }
+
+    private fun addFPSHybrid(builder: ExploreCommandBuilder, cfg: ConfigurationWrapper) {
+        val strategy = FitnessHybridStrategy(cfg, modelPath = null)
+        builder.withStrategy(strategy)
+
+        builder.insertBefore(StrategySelector.randomWidget,
+            "fps-h",
+            { context, pool, _ ->
+                // Force synchronization
+                val feature = context.findWatcher { it is EventProbabilityMF }
+                feature?.join()
+
+                pool.getFirstInstanceOf(FitnessHybridStrategy::class.java)
+            })
+    }
+}

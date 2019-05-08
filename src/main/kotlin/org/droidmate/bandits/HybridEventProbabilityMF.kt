@@ -1,4 +1,4 @@
-package saarland.cispa.droidmate.thesis
+package org.droidmate.bandits
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -17,17 +17,12 @@ open class HybridEventProbabilityMF(
     modelName: String,
     arffName: String,
     useClassMembershipProbability: Boolean,
-    private val psi: Double = 20.0
+    private val psi: Double,
+    private val useCrowdModel: Boolean,
+    private val modelPath: Path?
 ) : EventProbabilityMF(modelName, arffName, useClassMembershipProbability) {
 
-    constructor(
-        modelName: String,
-        arffName: String,
-        useClassMembershipProbability: Boolean,
-        modelPath: Path?,
-        psi: Double = 20.0
-    ) : this(modelName, arffName, useClassMembershipProbability, psi) {
-
+    init {
         if (modelPath != null && Files.exists(modelPath)) {
             log.info("Reading trials from file $modelPath")
             val lines = Files.readAllLines(modelPath)
@@ -38,7 +33,8 @@ open class HybridEventProbabilityMF(
         }
     }
 
-    private val actionSet = setOf("Click", "LongClick", "Swipe-Up", "Swipe-Down", "Swipe-Left", "Swipe-Right")
+    private val actionSet = setOf("Click", "ClickEvent", "LongClick", "LongClickEvent", "Tick",
+        "Swipe-Up", "Swipe-Down", "Swipe-Left", "Swipe-Right")
 
     /* Number of trials and wins */
     protected val trials: MutableMap<String, MutableMap<String, Double>> = mutableMapOf()
@@ -121,7 +117,7 @@ open class HybridEventProbabilityMF(
     override fun getProbabilities(state: State): Map<Widget, Double> {
         try {
             runBlocking { mutex.lock() }
-            return state.actionableWidgets
+            return state.visibleTargets
                 .map { widget ->
                     // Return the maximum event probability for a widget, given the types of event that can be triggered
                     val probabilities = getProbabilitiesUnsync(widget, state, widget.availableActions(0, false))
@@ -192,7 +188,7 @@ open class HybridEventProbabilityMF(
     }
 
     private fun addNewWidgets(newState: State) {
-        newState.actionableWidgets.forEach { widget ->
+        newState.widgets.forEach { widget ->
             val classId = widget.toClassIdentifier(newState)
 
             // Initialize trials and wins for new widget type instance
@@ -202,7 +198,11 @@ open class HybridEventProbabilityMF(
                 originalTrials[classId] = mutableMapOf()
                 originalWins[classId] = mutableMapOf()
 
-                val predictionProbability = widget.getProbabilityFromModel(newState)
+                val predictionProbability = if (useCrowdModel) {
+                    widget.getProbabilityFromModel(newState)
+                } else {
+                    1.0
+                }
 
                 actionSet.forEach { actionId ->
                     trials[classId]!![actionId] = psi

@@ -1,4 +1,4 @@
-package saarland.cispa.droidmate.thesis
+package org.droidmate.bandits
 
 import kotlinx.coroutines.runBlocking
 import org.droidmate.api.ExplorationAPI
@@ -40,7 +40,12 @@ object RegressionMain {
                 directory.mkdirs()
 
                 // run Droidmate
-                modelPath = runDroidMate(deviceSerial, "$it/droidMate", "$apkFolder/$it", modelPath)
+                modelPath = runDroidMate(
+                    deviceSerial,
+                    "$it/droidMate",
+                    "$apkFolder/$it",
+                    modelPath
+                )
             }
         }
     }

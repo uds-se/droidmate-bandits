@@ -1,12 +1,12 @@
-package saarland.cispa.droidmate.thesis
+package org.droidmate.bandits
 
 import com.natpryce.konfig.booleanType
 import com.natpryce.konfig.getValue
-import com.natpryce.konfig.uriType
 
 object CommandLineConfig {
-    val apk by uriType
-    val onlyAppPackage by booleanType
-    val printToLogcat by booleanType
-    val outputDir by uriType
+    val epsilon by booleanType
+    val epsilonHybrid by booleanType
+    val thompson by booleanType
+    val thompsonHybrid by booleanType
+    val fpsHybrid by booleanType
 }

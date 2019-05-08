@@ -1,4 +1,4 @@
-package saarland.cispa.droidmate.thesis
+package org.droidmate.bandits
 
 import org.droidmate.configuration.ConfigurationWrapper
 import org.droidmate.deviceInterface.exploration.ExplorationAction
@@ -49,6 +49,14 @@ open class FitnessHybridStrategy constructor(
     override fun initialize(memory: ExplorationContext) {
         super.initialize(memory)
 
-        eContext.addWatcher(HybridEventProbabilityMF(modelName, arffName, true, modelPath))
+        eContext.addWatcher(
+            HybridEventProbabilityMF(
+                modelName,
+                arffName,
+                true,
+                1.0,
+                useCrowdModel = true,
+                modelPath = null)
+        )
     }
 }

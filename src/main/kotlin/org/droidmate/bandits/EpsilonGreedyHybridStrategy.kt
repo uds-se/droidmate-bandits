@@ -1,4 +1,4 @@
-package saarland.cispa.droidmate.thesis
+package org.droidmate.bandits
 
 import org.droidmate.configuration.ConfigurationWrapper
 import org.droidmate.deviceInterface.exploration.ExplorationAction
@@ -7,25 +7,26 @@ import org.droidmate.exploration.actions.availableActions
 import org.droidmate.exploration.modelFeatures.EventProbabilityMF
 import org.droidmate.exploration.strategy.FitnessProportionateSelection
 import org.droidmate.explorationModel.interaction.Widget
-import java.nio.file.Path
 
 open class EpsilonGreedyHybridStrategy @JvmOverloads constructor(
     randomSeed: Long,
-    private val modelPath: Path?,
+    // private val modelPath: Path?,
+    private val useCrowdModel: Boolean,
     modelName: String = "HasModel.model",
     arffName: String = "baseModelFile.arff",
     private val epsilon: Double = 0.3,
-    private val psi: Double
+    private val psi: Double = 20.0
 ) : FitnessProportionateSelection(randomSeed, modelName, arffName) {
 
     constructor(
         cfg: ConfigurationWrapper,
-        modelPath: Path?,
+        // modelPath: Path?,
+        useCrowdModel: Boolean,
         modelName: String = "HasModel.model",
         arffName: String = "baseModelFile.arff",
         epsilon: Double = 0.3,
-        psi: Double
-    ) : this(cfg.randomSeed, modelPath, modelName, arffName, epsilon, psi)
+        psi: Double = 20.0
+    ) : this(cfg.randomSeed, useCrowdModel, modelName, arffName, epsilon, psi)
 
     override val eventWatcher: EventProbabilityMF
         get() = (eContext.findWatcher { it is HybridEventProbabilityMF } as EventProbabilityMF)
@@ -78,7 +79,15 @@ open class EpsilonGreedyHybridStrategy @JvmOverloads constructor(
     override fun initialize(memory: ExplorationContext) {
         super.initialize(memory)
 
-        eContext.addWatcher(HybridEventProbabilityMF(modelName, arffName, true, modelPath, psi))
+        eContext.addWatcher(
+            HybridEventProbabilityMF(
+                modelName,
+                arffName,
+                true,
+                psi,
+                useCrowdModel,
+                modelPath = null)
+        )
     }
 
     private fun <K, V : Comparable<V>> Map<K, V>.randomItemWithMaxValue(): K {
