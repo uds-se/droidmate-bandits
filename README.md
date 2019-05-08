@@ -1,4 +1,4 @@
-# DM-2: ModelBased and FitnessProportionateSelection strategies![GNU GPL v3](https://www.gnu.org/graphics/gplv3-88x31.png)
+# DM-2: Reinforcement Learning Strategies![GNU GPL v3](https://www.gnu.org/graphics/gplv3-88x31.png)
    [![Build Status](https://travis-ci.org/uds-se/droidmate-bandits.svg?branch=master)](https://travis-ci.org/uds-se/droidmate-bandits)
    [![](https://jitpack.io/v/uds-se/droidmate-bandits.svg)](https://jitpack.io/#uds-se/droidmate-bandits)
 
@@ -47,7 +47,7 @@ To list all available parameters, run with `--help`
 ./gradlew --args='--help'
 ```
 
-# Example configuration with arguments:
+## Example configuration with arguments:
 
 To run all apps located in the `./apks` folder a configuration would be similar to: 
 
