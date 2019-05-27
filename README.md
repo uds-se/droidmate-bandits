@@ -225,8 +225,9 @@ If you are experiencing issues installing the emulator, such as:
 Could not launch '/usr/local/Caskroom/android-sdk/4333796/tools/../emulator/qemu/darwin-x86_64/qemu-system-i386': No such file or directory
 ```
 
-The Android emulator require special host characteristics, such as qemu (e.g. when running on Docker) and a graphics card (to use hardware accelerated rendering). 
-Have a look at [this](https://stackoverflow.com/questions/42554337/cannot-launch-avd-in-emulatorqt-library-not-found) stack overflow thread.
+The Android emulator require special host characteristics, such as qemu (e.g. when running on Docker) and a graphics card (to use hardware accelerated rendering).
+If you are using a virtualized environment (such as Docker), try it in your host OS.
+Otherwise, have a look at [this](https://stackoverflow.com/questions/42554337/cannot-launch-avd-in-emulatorqt-library-not-found) stack overflow thread.
 
 ## Other exceptions
 
