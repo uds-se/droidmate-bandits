@@ -62,6 +62,9 @@ To confirm that everything worked fine execute:
 
 It will list all available configuration parameters.
 
+## Obtaining apks
+
+Apks for testing can be downloaded from [F-Droid](https://f-droid.org/) or alternative app stores, such as [ApkPure](https://apkpure.com/).
 
 # Running the experiments
 
@@ -154,6 +157,8 @@ This data can be compared against the original set of instrumented statements to
 * `log`: Copy of the device logcat during exploration.
 
 For the paper experiments we used only the reached statements from the `<DM>/out/droidMate/coverage`.
+
+__If the coverage folder is empty you are executing an apk which has not been instrumented. Please check Step 1__
 
 # Misc comments
 
