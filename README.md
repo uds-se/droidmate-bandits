@@ -211,7 +211,6 @@ It means that DM-2 could not connect to the accessibility service on the device.
 
 Please restart the device and try the exploration again.
 
-
 ## No Android Devices Found exception
 
 If you see a `NoAndroidDevicesFoundException` please check your device connection with the command `adb devices`. 
@@ -229,6 +228,26 @@ Could not launch '/usr/local/Caskroom/android-sdk/4333796/tools/../emulator/qemu
 The Android emulator require special host characteristics, such as qemu (e.g. when running on Docker) and a graphics card (to use hardware accelerated rendering). 
 Have a look at [this](https://stackoverflow.com/questions/42554337/cannot-launch-avd-in-emulatorqt-library-not-found) stack overflow thread.
 
+## Other exceptions
+
+```
+Exception in thread "main" org.droidmate.device.android_sdk.AdbWrapperException: Executing 'adb install' failed. Oh my. 
+	at org.droidmate.device.android_sdk.AdbWrapper.installApk(AdbWrapper.kt:149) 
+	at org.droidmate.device.AndroidDevice.installApk(AndroidDevice.kt:361) 
+	at org.droidmate.device.AndroidDevice.reinstallUiAutomatorDaemon(AndroidDevice.kt:372) 
+	at org.droidmate.device.deviceInterface.RobustDevice$reinstallUiAutomatorDaemon2.invokeSuspend(RobustDevice.kt:645)
+	at org.droidmate.device.deviceInterface.RobustDevice2.invokeSuspend(RobustDevice.kt:645) 
+	at org.droidmate.device.deviceInterface.RobustDevice2.invokeSuspend(RobustDevice.kt:645) 
+	at org.droidmate.device.deviceInterface.RobustDevicereinstallUiAutomatorDaemon2.invoke(RobustDevice.kt) 
+	at org.droidmate.misc.Utils2.invoke(RobustDevice.kt) 
+	at org.droidmate.misc.Utils2.invoke(RobustDevice.kt)
+	at org.droidmate.misc.UtilsCompanion.retryOnException(Utils.kt:57) 
+	at org.droidmate.misc.UtilsCompanionCompanionCompanionretryOnException1.invokeSuspend(Utils.kt) 
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:32)
+	(...)
+```
+
+A problem occured while starting the on-device TCP server used to interact with the device. Please restart the device or emulator.
 
 # More
 
