@@ -5,7 +5,8 @@
 Strategies for [DroidMate-2](https://github.com/uds-se/droidmate): A Platform for Android Test Generation.
 
 [ISSTA'19 paper: Learning User Interface Element Interactions](https://dl.acm.org/citation.cfm?id=3330569)
-[ISSTA'19 presentation](https://github.com/uds-se/droidmate/issta19-wide.pdf)
+
+[ISSTA'19 presentation](https://github.com/uds-se/droidmate-bandits/blob/master/issta19-wide.pdf)
 
 # Directory Convention
 
